@@ -1,6 +1,6 @@
 # orion-cli
 
-CLI d'initialisation pour le SDK **nom** — se connecte à ton instance Orion, récupère ou crée un projet, et génère `nom.config.ts`.
+CLI d'initialisation pour le SDK **Orion** — se connecte à ton instance Orion, récupère ou crée un projet, et génère `orion.config.ts`.
 
 ## Usage
 
@@ -13,7 +13,6 @@ npx create-orion
 ## Flow
 
 ```
-1. URL de ton serveur Orion  (ex: https://api.monorion.com)
 2. Login avec ton compte     (email + mot de passe)
 3. Sélectionner un projet    (ou en créer un nouveau)
 4. Nom de la source          (ex: api-backend, worker-queue)
@@ -40,7 +39,7 @@ export default defineConfig({
 | Variable         | Description                              |
 |------------------|------------------------------------------|
 | `ORION_API_URL`  | Pré-remplit l'URL du serveur au prompt   |
-| `ORION_TOKEN`      | Token injecté si stocké dans `.env`      |
+| `ORION_TOKEN`    | Token injecté si stocké dans `.env`      |
 
 ## Dev
 
