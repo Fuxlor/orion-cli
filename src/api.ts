@@ -92,3 +92,18 @@ export async function getProjectToken(
   )
   return res.token
 }
+
+export async function registerSource(
+  baseUrl: string,
+  token: string,
+  projectName: string,
+  name: string,
+  description: string,
+  env: string,
+): Promise<{ name: string }> {
+  return request<{ name: string }>(baseUrl, `/api/projects/${encodeURIComponent(projectName)}/sources`, {
+    method: 'POST',
+    token,
+    body: JSON.stringify({ name, description, environment: env }),
+  })
+}

@@ -5,34 +5,21 @@ import type { OrionConfig } from './types.js'
 export function writeConfig(
   config: OrionConfig,
   targetDir: string = process.cwd(),
-  useEnvForToken = true,
-): { configPath: string; envPath?: string } {
+): { configPath: string } {
   const configPath = path.join(targetDir, 'orion.config.ts')
-
-  const tokenLine = useEnvForToken
-    ? `  token: process.env.ORION_TOKEN!,`
-    : `  token: '${config.token}',`
 
   const content = [
     `import { defineConfig } from 'orion-cli'`,
     ``,
     `export default defineConfig({`,
-    tokenLine,
-    `  source: '${config.source}',`,
-    `  environment: '${config.environment}',`,
-    `  serverUrl: '${config.serverUrl}',`,
+    `  token: '${config.token}',`,
+    `  projectName: '${config.projectName}',`,
+    `  sourceName: '${config.sourceName}',`,
     `})`,
     ``,
   ].join('\n')
 
   fs.writeFileSync(configPath, content, 'utf-8')
-
-  if (useEnvForToken) {
-    const envPath = path.join(targetDir, '.env')
-    const envEntry = `\n# Orion logging\nORION_TOKEN=${config.token}\n`
-    fs.appendFileSync(envPath, envEntry, 'utf-8')
-    return { configPath, envPath }
-  }
 
   return { configPath }
 }

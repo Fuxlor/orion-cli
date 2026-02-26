@@ -14,9 +14,10 @@ import {
   log,
 } from '@clack/prompts'
 import pc from 'picocolors'
-import { login, listProjects, createProject, getProjectToken, ApiError } from './api.js'
+import { login, listProjects, createProject, getProjectToken, ApiError, registerSource } from './api.js'
 import { writeConfig, configExists, normalizeName } from './writer.js'
 import type { Environment } from './types.js'
+import { loginWithBrowser } from './auth-browser.js'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -54,11 +55,48 @@ async function main() {
     }
   }
 
-  const base = "http://localhost:3001/";
+  const base = "http://localhost:3001";
 
   // 2. Connexion au compte Orion
   log.step('Connexion à votre compte Orion')
-  // TODO: Login avec web (open auth flow in browser) or login from personnal user token or credentials, make it a prompt with options
+
+  // Propose deux méthodes d'auth
+  const authMethod = await select({
+    message: 'Comment voulez-vous vous connecter ?',
+    options: [
+      {
+        value: 'browser',
+        label: '🌐  Via le navigateur',
+        hint: 'Recommandé',
+      },
+      {
+        value: 'token',
+        label: '🔑  Token personnel',
+        hint: 'Collez votre token depuis le dashboard',
+      },
+    ],
+  })
+  bail(authMethod)
+
+  let accessToken: string
+
+  if (authMethod === 'browser') {
+    try {
+      accessToken = await loginWithBrowser(base)
+    } catch (err) {
+      cancel(`Échec de l'authentification : ${err instanceof Error ? err.message : String(err)}`)
+      process.exit(1)
+    }
+
+  } else {
+    // Fallback : token manuel (utile en CI/CD ou si le navigateur ne s'ouvre pas)
+    const manualToken = await password({
+      message: 'Collez votre token personnel (depuis orion.dev/settings) :',
+      mask: '*',
+    })
+    bail(manualToken)
+    accessToken = manualToken as string
+  }
 
   // 3. Choisir ou créer un projet
   const projectsSpinner = spinner()
@@ -160,47 +198,45 @@ async function main() {
     placeholder: 'api-backend',
     validate: (v) => {
       if (!v.trim()) return 'Requis.'
-      if (!/^[a-z0-9_-]+$/.test(v)) return 'Minuscules, chiffres, - et _ uniquement.'
+      if (!/^[a-z0-9_-]+$/.test(v)) return 'Minuscules, chiffres, et - uniquement.'
       return undefined
     },
   })
   bail(source)
 
-  // 5. Environnement
+  // 5. Description de la source
+  const description = await text({
+    message: 'Description de la source ?',
+    placeholder: 'Gestion des utilisateurs',
+  })
+  bail(description)
+
+  // 6. Environnement
   const environment = await select<Environment>({
     message: 'Environnement ?',
     options: [
-      { value: 'production',  label: 'Production',  hint: 'prod' },
-      { value: 'development', label: 'Development', hint: 'dev' },
-      { value: 'staging',     label: 'Staging',     hint: 'staging' },
-      { value: 'test',        label: 'Test',        hint: 'test' },
+      { value: 'prod', label: 'Production', hint: 'prod' },
+      { value: 'dev', label: 'Development', hint: 'dev' },
+      { value: 'staging', label: 'Staging', hint: 'staging' },
+      { value: 'test', label: 'Test', hint: 'test' },
     ],
   })
   bail(environment)
 
-  // 6. Token dans .env ?
-  const useEnv = await confirm({
-    message: 'Stocker le token dans .env plutôt que dans orion.config.ts ?',
-    initialValue: true,
-  })
-  bail(useEnv)
-
-  // Remplacer wss:// ↔ http:// selon le protocole du serverUrl
-  const wsUrl = base.replace(/^https:\/\//, 'wss://').replace(/^http:\/\//, 'ws://')
+  // 7. Register source on server
+  let result = await registerSource(base, accessToken, projectName as string, source as string, description as string, environment as string)
 
   // 7. Écriture
   const writeSpinner = spinner()
   writeSpinner.start('Écriture de orion.config.ts...')
 
-  const { configPath, envPath } = writeConfig(
+  const { configPath } = writeConfig(
     {
       token: projectToken,
-      source: source as string,
-      environment: environment as Environment,
-      serverUrl: wsUrl,
+      projectName: projectName,
+      sourceName: result.name,
     },
     process.cwd(),
-    useEnv as boolean,
   )
 
   writeSpinner.stop(pc.green('✓ Configuration écrite'))
@@ -209,11 +245,8 @@ async function main() {
   note(
     [
       `Projet     : ${pc.bold(projectName)}`,
-      `Source     : ${pc.bold(source as string)}`,
-      `Env        : ${pc.bold(environment as string)}`,
-      `Serveur    : ${pc.cyan(wsUrl)}`,
+      `Source     : ${pc.bold(result.name)}`,
       `Config     : ${pc.cyan(configPath)}`,
-      envPath ? `Token dans : ${pc.cyan(envPath)}` : `Token dans : ${pc.cyan(configPath)}`,
     ].join('\n'),
     'Récapitulatif',
   )
@@ -222,9 +255,9 @@ async function main() {
   outro(
     pc.green('✓ Setup terminé !\n\n') +
     '  Installez le SDK :\n' +
-    pc.cyan('  npm install orion-cli\n\n') +
+    pc.cyan('  npm install orion\n\n') +
     '  Puis dans votre code :\n' +
-    pc.gray("  import { createLogger } from 'orion-cli'\n") +
+    pc.gray("  import { createLogger } from 'orion'\n") +
     pc.gray('  const logger = await createLogger()\n') +
     pc.gray("  logger.info('Hello from Orion!')"),
   )

@@ -34,7 +34,6 @@ export interface GetTokenResponse {
 
 export interface OrionConfig {
   token: string
-  source: string
-  environment: Environment
-  serverUrl: string
+  projectName: string
+  sourceName: string
 }
