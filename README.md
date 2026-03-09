@@ -5,19 +5,18 @@ CLI d'initialisation pour le SDK **Orion** — se connecte à ton instance Orion
 ## Usage
 
 ```bash
-npx orion-cli
-# ou
-npx create-orion
+npx @orion-monitoring/cli
 ```
 
 ## Flow
 
 ```
-2. Login avec ton compte     (email + mot de passe)
-3. Sélectionner un projet    (ou en créer un nouveau)
-4. Nom de la source          (ex: api-backend, worker-queue)
+1. Login avec ton compte     (email + mot de passe)
+2. Sélectionner un projet    (ou en créer un nouveau)
+3. Nom de la source          (ex: api-backend, worker-queue)
+4. Description de la source  (ex: Gere l'api de l'app)
 5. Environnement             (production / development / staging / test)
-6. Génère nom.config.ts      (token dans .env ou directement)
+6. Génère orion.config.ts      (token dans .env ou directement)
 ```
 
 ## Fichier généré
@@ -32,20 +31,4 @@ export default defineConfig({
   environment: 'production',
   serverUrl: 'wss://api.monorion.com',
 })
-```
-
-## Variable d'environnement
-
-| Variable         | Description                              |
-|------------------|------------------------------------------|
-| `ORION_API_URL`  | Pré-remplit l'URL du serveur au prompt   |
-| `ORION_TOKEN`    | Token injecté si stocké dans `.env`      |
-
-## Dev
-
-```bash
-npm install
-npm run dev    # tsx watch
-npm run build  # compile vers dist/
-npm link       # teste `orion-cli` en global
 ```
