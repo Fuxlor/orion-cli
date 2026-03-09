@@ -110,9 +110,6 @@ async function main() {
     projectsSpinner.stop(pc.yellow('⚠ Impossible de charger les projets'))
   }
 
-  // Options : projets existants + créer nouveau
-  type ProjectChoice = string // project name ou '__new__'
-
   const projectOptions = [
     ...projects.map((p) => ({
       value: p.name,
@@ -126,7 +123,7 @@ async function main() {
     },
   ]
 
-  const selectedProject = await select<ProjectChoice>({
+  const selectedProject = await select({
     message: 'Quel projet utiliser ?',
     options: projectOptions,
   })
@@ -212,7 +209,7 @@ async function main() {
   bail(description)
 
   // 6. Environnement
-  const environment = await select<Environment>({
+  const environment = await select({
     message: 'Environnement ?',
     options: [
       { value: 'prod', label: 'Production', hint: 'prod' },
