@@ -9,7 +9,7 @@ export function writeConfig(
   const configPath = path.join(targetDir, 'orion.config.ts')
 
   const content = [
-    `import { defineConfig } from 'orion-cli'`,
+    `import { defineConfig } from '@orion-monitoring/sdk'`,
     ``,
     `export default defineConfig({`,
     `  token: '${config.token}',`,

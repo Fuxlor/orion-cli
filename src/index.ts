@@ -252,9 +252,9 @@ async function main() {
   outro(
     pc.green('✓ Setup terminé !\n\n') +
     '  Installez le SDK :\n' +
-    pc.cyan('  npm install orion\n\n') +
+    pc.cyan('  npm install @orion-monitoring/sdk\n\n') +
     '  Puis dans votre code :\n' +
-    pc.gray("  import { createLogger } from 'orion'\n") +
+    pc.gray("  import { createLogger } from '@orion-monitoring/sdk'\n") +
     pc.gray('  const logger = await createLogger()\n') +
     pc.gray("  logger.info('Hello from Orion!')"),
   )
