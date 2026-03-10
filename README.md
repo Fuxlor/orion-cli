@@ -1,6 +1,6 @@
 # orion-cli
 
-CLI d'initialisation pour le SDK **Orion** — se connecte à ton instance Orion, récupère ou crée un projet, et génère `orion.config.ts`.
+Initialization CLI for the **Orion** SDK — connects to your Orion instance, retrieves or creates a project, and generates `orion.config.ts`.
 
 ## Usage
 
@@ -11,22 +11,22 @@ npx @orion-monitoring/cli
 ## Flow
 
 ```
-1. Login avec ton compte     (email + mot de passe)
-2. Sélectionner un projet    (ou en créer un nouveau)
-3. Nom de la source          (ex: api-backend, worker-queue)
-4. Description de la source  (ex: Gere l'api de l'app)
-5. Environnement             (production / development / staging / test)
-6. Génère orion.config.ts      (token dans .env ou directement)
+1. Log in with your account       (email + password)
+2. Select a project               (or create a new one)
+3. Source name                    (e.g. api-backend, worker-queue)
+4. Source description             (e.g. Handles the app API)
+5. Environment                    (production / development / staging / test)
+6. Generate orion.config.ts       (token in .env or directly)
 ```
 
-## Fichier généré
+## Generated file
 
 ```ts
-// nom.config.ts
+// orion.config.ts
 import { defineConfig } from 'orion-cli'
 
 export default defineConfig({
-  token: process.env.ORION_TOKEN!, // ou le token directement
+  token: process.env.ORION_TOKEN!, // or the token directly
   source: 'api-backend',
   environment: 'production',
   serverUrl: 'wss://api.monorion.com',

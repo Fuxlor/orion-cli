@@ -1,6 +1,6 @@
 export type Environment = 'production' | 'development' | 'staging' | 'test'
 
-// ─── Réponses API ─────────────────────────────────────────────────────────────
+// ─── API responses ────────────────────────────────────────────────────────────
 
 export interface LoginResponse {
   accessToken: string
@@ -30,7 +30,7 @@ export interface GetTokenResponse {
   token: string
 }
 
-// ─── Config générée ───────────────────────────────────────────────────────────
+// ─── Generated config ─────────────────────────────────────────────────────────
 
 export interface OrionConfig {
   token: string

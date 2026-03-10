@@ -23,7 +23,7 @@ import { loginWithBrowser } from './auth-browser.js'
 
 function bail(value: unknown): asserts value is NonNullable<typeof value> {
   if (isCancel(value)) {
-    cancel('Setup annulé.')
+    cancel('Setup cancelled.')
     process.exit(0)
   }
 }
@@ -42,15 +42,15 @@ async function main() {
   orionBanner()
   intro(pc.bgCyan(pc.black(' orion-cli ')))
 
-  // 0. Config existante ?
+  // 0. Existing config?
   if (configExists()) {
     const overwrite = await confirm({
-      message: pc.yellow('Un fichier orion.config.ts existe déjà. L\'écraser ?'),
+      message: pc.yellow('An orion.config.ts file already exists. Overwrite it?'),
       initialValue: false,
     })
     bail(overwrite)
     if (!overwrite) {
-      cancel('Setup annulé — configuration existante conservée.')
+      cancel('Setup cancelled — existing configuration kept.')
       process.exit(0)
     }
   }
@@ -58,21 +58,21 @@ async function main() {
   const base = "http://localhost:3001";
 
   // 2. Connexion au compte Orion
-  log.step('Connexion à votre compte Orion')
+  log.step('Sign in to your Orion account')
 
-  // Propose deux méthodes d'auth
+  // Offer two auth methods
   const authMethod = await select({
-    message: 'Comment voulez-vous vous connecter ?',
+    message: 'How do you want to sign in?',
     options: [
       {
         value: 'browser',
-        label: '🌐  Via le navigateur',
-        hint: 'Recommandé',
+        label: '🌐  Via browser',
+        hint: 'Recommended',
       },
       {
         value: 'token',
-        label: '🔑  Token personnel',
-        hint: 'Collez votre token depuis le dashboard',
+        label: '🔑  Personal token',
+        hint: 'Paste your token from the dashboard',
       },
     ],
   })
@@ -84,30 +84,30 @@ async function main() {
     try {
       accessToken = await loginWithBrowser(base)
     } catch (err) {
-      cancel(`Échec de l'authentification : ${err instanceof Error ? err.message : String(err)}`)
+      cancel(`Authentication failed: ${err instanceof Error ? err.message : String(err)}`)
       process.exit(1)
     }
 
   } else {
-    // Fallback : token manuel (utile en CI/CD ou si le navigateur ne s'ouvre pas)
+    // Fallback: manual token (useful in CI/CD or if the browser doesn't open)
     const manualToken = await password({
-      message: 'Collez votre token personnel (depuis orion.dev/settings) :',
+      message: 'Paste your personal token (from orion.dev/settings):',
       mask: '*',
     })
     bail(manualToken)
     accessToken = manualToken as string
   }
 
-  // 3. Choisir ou créer un projet
+  // 3. Choose or create a project
   const projectsSpinner = spinner()
-  projectsSpinner.start('Récupération des projets...')
+  projectsSpinner.start('Fetching projects...')
 
   let projects: { id: string; name: string; label: string }[] = []
   try {
     projects = await listProjects(base, accessToken)
-    projectsSpinner.stop(pc.green(`✓ ${projects.length} projet(s) trouvé(s)`))
+    projectsSpinner.stop(pc.green(`✓ ${projects.length} project(s) found`))
   } catch {
-    projectsSpinner.stop(pc.yellow('⚠ Impossible de charger les projets'))
+    projectsSpinner.stop(pc.yellow('⚠ Could not load projects'))
   }
 
   const projectOptions = [
@@ -118,13 +118,13 @@ async function main() {
     })),
     {
       value: '__new__',
-      label: pc.cyan('+ Créer un nouveau projet'),
+      label: pc.cyan('+ Create a new project'),
       hint: '',
     },
   ]
 
   const selectedProject = await select({
-    message: 'Quel projet utiliser ?',
+    message: 'Which project do you want to use?',
     options: projectOptions,
   })
   bail(selectedProject)
@@ -133,29 +133,29 @@ async function main() {
   let projectName: string
 
   if (selectedProject === '__new__') {
-    // Créer un nouveau projet
+    // Create a new project
     const rawLabel = await text({
-      message: 'Nom affiché du projet (label) ?',
-      placeholder: 'Mon Backend',
-      validate: (v) => !v.trim() ? 'Le label est requis.' : undefined,
+      message: 'Project display name (label)?',
+      placeholder: 'My Backend',
+      validate: (v) => !v.trim() ? 'Label is required.' : undefined,
     })
     bail(rawLabel)
 
     const rawName = await text({
-      message: 'Identifiant du projet (slug) ?',
+      message: 'Project identifier (slug)?',
       placeholder: normalizeName(rawLabel as string),
       initialValue: normalizeName(rawLabel as string),
       validate: (v) => {
         const n = normalizeName(v)
-        if (!n) return 'Identifiant requis.'
-        if (!/^[a-z0-9][a-z0-9-]*$/.test(n)) return 'Minuscules, chiffres et tirets uniquement.'
+        if (!n) return 'Identifier is required.'
+        if (!/^[a-z0-9][a-z0-9-]*$/.test(n)) return 'Lowercase letters, digits and hyphens only.'
         return undefined
       },
     })
     bail(rawName)
 
     const createSpinner = spinner()
-    createSpinner.start('Création du projet...')
+    createSpinner.start('Creating project...')
 
     try {
       const created = await createProject(
@@ -166,24 +166,24 @@ async function main() {
       )
       projectToken = created.token
       projectName = created.name
-      createSpinner.stop(pc.green(`✓ Projet "${created.label}" créé`))
+      createSpinner.stop(pc.green(`✓ Project "${created.label}" created`))
     } catch (err) {
-      createSpinner.stop(pc.red('✗ Échec de la création'))
+      createSpinner.stop(pc.red('✗ Creation failed'))
       cancel(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
       process.exit(1)
     }
   } else {
-    // Projet existant → récupérer son token
+    // Existing project → get its token
     projectName = selectedProject as string
 
     const tokenSpinner = spinner()
-    tokenSpinner.start('Récupération du token...')
+    tokenSpinner.start('Fetching token...')
 
     try {
       projectToken = await getProjectToken(base, accessToken, projectName)
-      tokenSpinner.stop(pc.green('✓ Token récupéré'))
+      tokenSpinner.stop(pc.green('✓ Token retrieved'))
     } catch (err) {
-      tokenSpinner.stop(pc.red('✗ Impossible de récupérer le token'))
+      tokenSpinner.stop(pc.red('✗ Could not retrieve token'))
       cancel(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
       process.exit(1)
     }
@@ -191,11 +191,11 @@ async function main() {
 
   // 4. Nom de la source
   const source = await text({
-    message: 'Nom de la source (identifie l\'origine des logs) ?',
+    message: 'Source name (identifies the origin of logs)?',
     placeholder: 'api-backend',
     validate: (v) => {
-      if (!v.trim()) return 'Requis.'
-      if (!/^[a-z0-9_-]+$/.test(v)) return 'Minuscules, chiffres, et - uniquement.'
+      if (!v.trim()) return 'Required.'
+      if (!/^[a-z0-9_-]+$/.test(v)) return 'Lowercase letters, digits and hyphens only.'
       return undefined
     },
   })
@@ -203,14 +203,14 @@ async function main() {
 
   // 5. Description de la source
   const description = await text({
-    message: 'Description de la source ?',
-    placeholder: 'Gestion des utilisateurs',
+    message: 'Source description?',
+    placeholder: 'User management',
   })
   bail(description)
 
   // 6. Environnement
   const environment = await select({
-    message: 'Environnement ?',
+    message: 'Environment?',
     options: [
       { value: 'prod', label: 'Production', hint: 'prod' },
       { value: 'dev', label: 'Development', hint: 'dev' },
@@ -223,9 +223,9 @@ async function main() {
   // 7. Register source on server
   let result = await registerSource(base, accessToken, projectName as string, source as string, description as string, environment as string)
 
-  // 7. Écriture
+  // 7. Write config
   const writeSpinner = spinner()
-  writeSpinner.start('Écriture de orion.config.ts...')
+  writeSpinner.start('Writing orion.config.ts...')
 
   const { configPath } = writeConfig(
     {
@@ -236,21 +236,21 @@ async function main() {
     process.cwd(),
   )
 
-  writeSpinner.stop(pc.green('✓ Configuration écrite'))
+  writeSpinner.stop(pc.green('✓ Configuration written'))
 
-  // 8. Résumé
+  // 8. Summary
   note(
     [
-      `Projet     : ${pc.bold(projectName)}`,
+      `Project    : ${pc.bold(projectName)}`,
       `Source     : ${pc.bold(result.name)}`,
       `Config     : ${pc.cyan(configPath)}`,
     ].join('\n'),
-    'Récapitulatif',
+    'Summary',
   )
 
   // 9. Outro
   outro(
-    pc.green('✓ Setup terminé !\n\n') +
+    pc.green('✓ Setup complete!\n\n') +
     '  Installez le SDK :\n' +
     pc.cyan('  npm install @orion-monitoring/sdk\n\n') +
     '  Puis dans votre code :\n' +
@@ -261,6 +261,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error(pc.red('\nErreur inattendue :'), err)
+  console.error(pc.red('\nUnexpected error:'), err)
   process.exit(1)
 })
