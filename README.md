@@ -23,12 +23,11 @@ npx @orion-monitoring/cli
 
 ```ts
 // orion.config.ts
-import { defineConfig } from 'orion-cli'
+import { defineConfig } from '@orion-monitoring/sdk'
 
 export default defineConfig({
   token: process.env.ORION_TOKEN!, // or the token directly
-  source: 'api-backend',
-  environment: 'production',
-  serverUrl: 'wss://api.monorion.com',
+  projectName: 'my-project' 
+  sourceName: 'api-backend',
 })
 ```
