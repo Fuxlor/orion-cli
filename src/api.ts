@@ -2,7 +2,6 @@ import type {
   LoginResponse,
   Project,
   CreateProjectResponse,
-  GetTokenResponse,
 } from './types.js'
 
 export class ApiError extends Error {
@@ -80,15 +79,24 @@ export async function createProject(
   })
 }
 
-export async function getProjectToken(
+export async function createSdkToken(
   baseUrl: string,
   token: string,
   projectName: string,
+  sourceName: string,
 ): Promise<string> {
-  const res = await request<GetTokenResponse>(
+  const res = await request<{ token: string }>(
     baseUrl,
-    `/api/projects/${encodeURIComponent(projectName)}/token`,
-    { token },
+    `/api/projects/${encodeURIComponent(projectName)}/tokens`,
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({
+        name: `${sourceName} SDK`,
+        permissions: ['logs:write'],
+        source: sourceName,
+      }),
+    },
   )
   return res.token
 }

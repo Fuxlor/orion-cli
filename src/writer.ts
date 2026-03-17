@@ -13,8 +13,6 @@ export function writeConfig(
     ``,
     `export default defineConfig({`,
     `  token: '${config.token}',`,
-    `  projectName: '${config.projectName}',`,
-    `  sourceName: '${config.sourceName}',`,
     `})`,
     ``,
   ].join('\n')

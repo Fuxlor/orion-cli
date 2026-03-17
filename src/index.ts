@@ -14,7 +14,7 @@ import {
   log,
 } from '@clack/prompts'
 import pc from 'picocolors'
-import { login, listProjects, createProject, getProjectToken, ApiError, registerSource } from './api.js'
+import { login, listProjects, createProject, createSdkToken, ApiError, registerSource } from './api.js'
 import { writeConfig, configExists, normalizeName } from './writer.js'
 import type { Environment } from './types.js'
 import { loginWithBrowser } from './auth-browser.js'
@@ -129,7 +129,6 @@ async function main() {
   })
   bail(selectedProject)
 
-  let projectToken: string
   let projectName: string
 
   if (selectedProject === '__new__') {
@@ -164,7 +163,6 @@ async function main() {
         normalizeName(rawName as string),
         (rawLabel as string).trim(),
       )
-      projectToken = created.token
       projectName = created.name
       createSpinner.stop(pc.green(`✓ Project "${created.label}" created`))
     } catch (err) {
@@ -173,20 +171,7 @@ async function main() {
       process.exit(1)
     }
   } else {
-    // Existing project → get its token
     projectName = selectedProject as string
-
-    const tokenSpinner = spinner()
-    tokenSpinner.start('Fetching token...')
-
-    try {
-      projectToken = await getProjectToken(base, accessToken, projectName)
-      tokenSpinner.stop(pc.green('✓ Token retrieved'))
-    } catch (err) {
-      tokenSpinner.stop(pc.red('✗ Could not retrieve token'))
-      cancel(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
-      process.exit(1)
-    }
   }
 
   // 4. Nom de la source
@@ -223,16 +208,26 @@ async function main() {
   // 7. Register source on server
   let result = await registerSource(base, accessToken, projectName as string, source as string, description as string, environment as string)
 
-  // 7. Write config
+  // 8. Create source-bound SDK token
+  const tokenSpinner = spinner()
+  tokenSpinner.start('Creating SDK token...')
+
+  let sdkToken: string
+  try {
+    sdkToken = await createSdkToken(base, accessToken, projectName as string, result.name)
+    tokenSpinner.stop(pc.green('✓ SDK token created'))
+  } catch (err) {
+    tokenSpinner.stop(pc.red('✗ Could not create SDK token'))
+    cancel(`Error: ${err instanceof Error ? err.message : String(err)}`)
+    process.exit(1)
+  }
+
+  // 9. Write config
   const writeSpinner = spinner()
   writeSpinner.start('Writing orion.config.ts...')
 
   const { configPath } = writeConfig(
-    {
-      token: projectToken,
-      projectName: projectName,
-      sourceName: result.name,
-    },
+    { token: sdkToken },
     process.cwd(),
   )
 

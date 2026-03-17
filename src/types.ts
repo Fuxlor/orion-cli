@@ -26,14 +26,8 @@ export interface CreateProjectResponse {
   token: string
 }
 
-export interface GetTokenResponse {
-  token: string
-}
-
 // ─── Generated config ─────────────────────────────────────────────────────────
 
 export interface OrionConfig {
   token: string
-  projectName: string
-  sourceName: string
 }
