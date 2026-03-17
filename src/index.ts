@@ -14,7 +14,7 @@ import {
   log,
 } from '@clack/prompts'
 import pc from 'picocolors'
-import { login, listProjects, createProject, createProjectToken, listSources, ApiError, registerSource } from './api.js'
+import { login, listProjects, createProject, createSdkToken, listSources, ApiError, registerSource } from './api.js'
 import { writeConfig, configExists, normalizeName } from './writer.js'
 import type { Environment } from './types.js'
 import { loginWithBrowser } from './auth-browser.js'
@@ -129,7 +129,6 @@ async function main() {
   })
   bail(selectedProject)
 
-  let projectToken: string
   let projectName: string
 
   if (selectedProject === '__new__') {
@@ -164,7 +163,6 @@ async function main() {
         normalizeName(rawName as string),
         (rawLabel as string).trim(),
       )
-      projectToken = created.token
       projectName = created.name
       createSpinner.stop(pc.green(`✓ Project "${created.label}" created`))
     } catch (err) {
@@ -173,20 +171,7 @@ async function main() {
       process.exit(1)
     }
   } else {
-    // Existing project → create a new token (raw tokens are not stored, must be created)
     projectName = selectedProject as string
-
-    const tokenSpinner = spinner()
-    tokenSpinner.start('Creating token...')
-
-    try {
-      projectToken = await createProjectToken(base, accessToken, projectName)
-      tokenSpinner.stop(pc.green('✓ Token created'))
-    } catch (err) {
-      tokenSpinner.stop(pc.red('✗ Could not create token'))
-      cancel(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
-      process.exit(1)
-    }
   }
 
   // 4. Source selection or creation
@@ -257,50 +242,57 @@ async function main() {
     })
     bail(environment)
 
-    const result = await registerSource(base, accessToken, projectName, source as string, description as string, environment as string)
-    return result.name
+    // 7. Register source on server
+    let result = await registerSource(base, accessToken, projectName as string, source as string, description as string, environment as string)
+
+    // 8. Create source-bound SDK token
+    const tokenSpinner = spinner()
+    tokenSpinner.start('Creating SDK token...')
+
+    let sdkToken: string
+    try {
+      sdkToken = await createSdkToken(base, accessToken, projectName as string, result.name)
+      tokenSpinner.stop(pc.green('✓ SDK token created'))
+    } catch (err) {
+      tokenSpinner.stop(pc.red('✗ Could not create SDK token'))
+      cancel(`Error: ${err instanceof Error ? err.message : String(err)}`)
+      process.exit(1)
+    }
+
+    // 9. Write config
+    const writeSpinner = spinner()
+    writeSpinner.start('Writing orion.config.ts...')
+
+    const { configPath } = writeConfig(
+      { token: sdkToken },
+      process.cwd(),
+    )
+
+    writeSpinner.stop(pc.green('✓ Configuration written'))
+
+    // 8. Summary
+    note(
+      [
+        `Project    : ${pc.bold(projectName)}`,
+        `Source     : ${pc.bold(result.name)}`,
+        `Config     : ${pc.cyan(configPath)}`,
+      ].join('\n'),
+      'Summary',
+    )
+
+    // 9. Outro
+    outro(
+      pc.green('✓ Setup complete!\n\n') +
+      '  Installez le SDK :\n' +
+      pc.cyan('  npm install @orion-monitoring/sdk\n\n') +
+      '  Puis dans votre code :\n' +
+      pc.gray("  import { createLogger } from '@orion-monitoring/sdk'\n") +
+      pc.gray('  const logger = await createLogger()\n') +
+      pc.gray("  logger.info('Hello from Orion!')"),
+    )
   }
 
-  let result = { name: sourceName }
-
-  // 7. Write config
-  const writeSpinner = spinner()
-  writeSpinner.start('Writing orion.config.ts...')
-
-  const { configPath } = writeConfig(
-    {
-      token: projectToken,
-      projectName: projectName,
-      sourceName: result.name,
-    },
-    process.cwd(),
-  )
-
-  writeSpinner.stop(pc.green('✓ Configuration written'))
-
-  // 8. Summary
-  note(
-    [
-      `Project    : ${pc.bold(projectName)}`,
-      `Source     : ${pc.bold(result.name)}`,
-      `Config     : ${pc.cyan(configPath)}`,
-    ].join('\n'),
-    'Summary',
-  )
-
-  // 9. Outro
-  outro(
-    pc.green('✓ Setup complete!\n\n') +
-    '  Installez le SDK :\n' +
-    pc.cyan('  npm install @orion-monitoring/sdk\n\n') +
-    '  Puis dans votre code :\n' +
-    pc.gray("  import { createLogger } from '@orion-monitoring/sdk'\n") +
-    pc.gray('  const logger = await createLogger()\n') +
-    pc.gray("  logger.info('Hello from Orion!')"),
-  )
-}
-
-main().catch((err) => {
-  console.error(pc.red('\nUnexpected error:'), err)
-  process.exit(1)
-})
+  main().catch((err) => {
+    console.error(pc.red('\nUnexpected error:'), err)
+    process.exit(1)
+  })

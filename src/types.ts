@@ -40,6 +40,4 @@ export interface Source {
 
 export interface OrionConfig {
   token: string
-  projectName: string
-  sourceName: string
 }

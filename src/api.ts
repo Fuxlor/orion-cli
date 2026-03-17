@@ -81,18 +81,23 @@ export async function createProject(
   })
 }
 
-export async function createProjectToken(
+export async function createSdkToken(
   baseUrl: string,
   token: string,
   projectName: string,
+  sourceName: string,
 ): Promise<string> {
-  const res = await request<CreateTokenResponse>(
+  const res = await request<{ token: string }>(
     baseUrl,
     `/api/projects/${encodeURIComponent(projectName)}/tokens`,
     {
       method: 'POST',
       token,
-      body: JSON.stringify({ name: 'orion-cli', permissions: ['logs:write', 'logs:read'] }),
+      body: JSON.stringify({
+        name: `${sourceName} SDK`,
+        permissions: ['logs:write'],
+        source: sourceName,
+      }),
     },
   )
   return res.token
