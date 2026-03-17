@@ -244,55 +244,57 @@ async function main() {
 
     // 7. Register source on server
     let result = await registerSource(base, accessToken, projectName as string, source as string, description as string, environment as string)
-
-    // 8. Create source-bound SDK token
-    const tokenSpinner = spinner()
-    tokenSpinner.start('Creating SDK token...')
-
-    let sdkToken: string
-    try {
-      sdkToken = await createSdkToken(base, accessToken, projectName as string, result.name)
-      tokenSpinner.stop(pc.green('✓ SDK token created'))
-    } catch (err) {
-      tokenSpinner.stop(pc.red('✗ Could not create SDK token'))
-      cancel(`Error: ${err instanceof Error ? err.message : String(err)}`)
-      process.exit(1)
-    }
-
-    // 9. Write config
-    const writeSpinner = spinner()
-    writeSpinner.start('Writing orion.config.ts...')
-
-    const { configPath } = writeConfig(
-      { token: sdkToken },
-      process.cwd(),
-    )
-
-    writeSpinner.stop(pc.green('✓ Configuration written'))
-
-    // 8. Summary
-    note(
-      [
-        `Project    : ${pc.bold(projectName)}`,
-        `Source     : ${pc.bold(result.name)}`,
-        `Config     : ${pc.cyan(configPath)}`,
-      ].join('\n'),
-      'Summary',
-    )
-
-    // 9. Outro
-    outro(
-      pc.green('✓ Setup complete!\n\n') +
-      '  Installez le SDK :\n' +
-      pc.cyan('  npm install @orion-monitoring/sdk\n\n') +
-      '  Puis dans votre code :\n' +
-      pc.gray("  import { createLogger } from '@orion-monitoring/sdk'\n") +
-      pc.gray('  const logger = await createLogger()\n') +
-      pc.gray("  logger.info('Hello from Orion!')"),
-    )
+    return result.name
   }
 
-  main().catch((err) => {
-    console.error(pc.red('\nUnexpected error:'), err)
+  // 8. Create source-bound SDK token
+  const tokenSpinner = spinner()
+  tokenSpinner.start('Creating SDK token...')
+
+  let sdkToken: string
+  try {
+    sdkToken = await createSdkToken(base, accessToken, projectName as string, sourceName)
+    tokenSpinner.stop(pc.green('✓ SDK token created'))
+  } catch (err) {
+    tokenSpinner.stop(pc.red('✗ Could not create SDK token'))
+    cancel(`Error: ${err instanceof Error ? err.message : String(err)}`)
     process.exit(1)
-  })
+  }
+
+  // 9. Write config
+  const writeSpinner = spinner()
+  writeSpinner.start('Writing orion.config.ts...')
+
+  const { configPath } = writeConfig(
+    { token: sdkToken },
+    process.cwd(),
+  )
+
+  writeSpinner.stop(pc.green('✓ Configuration written'))
+
+  // 8. Summary
+  note(
+    [
+      `Project    : ${pc.bold(projectName)}`,
+      `Source     : ${pc.bold(sourceName)}`,
+      `Config     : ${pc.cyan(configPath)}`,
+    ].join('\n'),
+    'Summary',
+  )
+
+  // 9. Outro
+  outro(
+    pc.green('✓ Setup complete!\n\n') +
+    '  Installez le SDK :\n' +
+    pc.cyan('  npm install @orion-monitoring/sdk\n\n') +
+    '  Puis dans votre code :\n' +
+    pc.gray("  import { createLogger } from '@orion-monitoring/sdk'\n") +
+    pc.gray('  const logger = await createLogger()\n') +
+    pc.gray("  logger.info('Hello from Orion!')"),
+  )
+}
+
+main().catch((err) => {
+  console.error(pc.red('\nUnexpected error:'), err)
+  process.exit(1)
+})
