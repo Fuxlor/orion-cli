@@ -2,7 +2,8 @@ import type {
   LoginResponse,
   Project,
   CreateProjectResponse,
-  GetTokenResponse,
+  CreateTokenResponse,
+  Source,
 } from './types.js'
 
 export class ApiError extends Error {
@@ -80,17 +81,34 @@ export async function createProject(
   })
 }
 
-export async function getProjectToken(
+export async function createProjectToken(
   baseUrl: string,
   token: string,
   projectName: string,
 ): Promise<string> {
-  const res = await request<GetTokenResponse>(
+  const res = await request<CreateTokenResponse>(
     baseUrl,
-    `/api/projects/${encodeURIComponent(projectName)}/token`,
-    { token },
+    `/api/projects/${encodeURIComponent(projectName)}/tokens`,
+    {
+      method: 'POST',
+      token,
+      body: JSON.stringify({ name: 'orion-cli', permissions: ['logs:write', 'logs:read'] }),
+    },
   )
   return res.token
+}
+
+export async function listSources(
+  baseUrl: string,
+  token: string,
+  projectName: string,
+): Promise<Source[]> {
+  const res = await request<{ sources: Source[] }>(
+    baseUrl,
+    `/api/projects/${encodeURIComponent(projectName)}/sources`,
+    { token },
+  )
+  return res.sources
 }
 
 export async function registerSource(

@@ -26,8 +26,14 @@ export interface CreateProjectResponse {
   token: string
 }
 
-export interface GetTokenResponse {
+export interface CreateTokenResponse {
   token: string
+}
+
+export interface Source {
+  name: string
+  description: string
+  environment: string
 }
 
 // ─── Generated config ─────────────────────────────────────────────────────────

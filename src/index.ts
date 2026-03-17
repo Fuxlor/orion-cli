@@ -14,7 +14,7 @@ import {
   log,
 } from '@clack/prompts'
 import pc from 'picocolors'
-import { login, listProjects, createProject, getProjectToken, ApiError, registerSource } from './api.js'
+import { login, listProjects, createProject, createProjectToken, listSources, ApiError, registerSource } from './api.js'
 import { writeConfig, configExists, normalizeName } from './writer.js'
 import type { Environment } from './types.js'
 import { loginWithBrowser } from './auth-browser.js'
@@ -173,55 +173,95 @@ async function main() {
       process.exit(1)
     }
   } else {
-    // Existing project → get its token
+    // Existing project → create a new token (raw tokens are not stored, must be created)
     projectName = selectedProject as string
 
     const tokenSpinner = spinner()
-    tokenSpinner.start('Fetching token...')
+    tokenSpinner.start('Creating token...')
 
     try {
-      projectToken = await getProjectToken(base, accessToken, projectName)
-      tokenSpinner.stop(pc.green('✓ Token retrieved'))
+      projectToken = await createProjectToken(base, accessToken, projectName)
+      tokenSpinner.stop(pc.green('✓ Token created'))
     } catch (err) {
-      tokenSpinner.stop(pc.red('✗ Could not retrieve token'))
+      tokenSpinner.stop(pc.red('✗ Could not create token'))
       cancel(`Erreur : ${err instanceof Error ? err.message : String(err)}`)
       process.exit(1)
     }
   }
 
-  // 4. Nom de la source
-  const source = await text({
-    message: 'Source name (identifies the origin of logs)?',
-    placeholder: 'api-backend',
-    validate: (v) => {
-      if (!v.trim()) return 'Required.'
-      if (!/^[a-z0-9_-]+$/.test(v)) return 'Lowercase letters, digits and hyphens only.'
-      return undefined
-    },
-  })
-  bail(source)
+  // 4. Source selection or creation
+  const sourcesSpinner = spinner()
+  sourcesSpinner.start('Fetching sources...')
 
-  // 5. Description de la source
-  const description = await text({
-    message: 'Source description?',
-    placeholder: 'User management',
-  })
-  bail(description)
+  let existingSources: { name: string; description: string; environment: string }[] = []
+  try {
+    existingSources = await listSources(base, accessToken, projectName)
+    sourcesSpinner.stop(pc.green(`✓ ${existingSources.length} source(s) found`))
+  } catch {
+    sourcesSpinner.stop(pc.yellow('⚠ Could not load sources'))
+  }
 
-  // 6. Environnement
-  const environment = await select({
-    message: 'Environment?',
-    options: [
-      { value: 'prod', label: 'Production', hint: 'prod' },
-      { value: 'dev', label: 'Development', hint: 'dev' },
-      { value: 'staging', label: 'Staging', hint: 'staging' },
-      { value: 'test', label: 'Test', hint: 'test' },
-    ],
-  })
-  bail(environment)
+  let sourceName: string
 
-  // 7. Register source on server
-  let result = await registerSource(base, accessToken, projectName as string, source as string, description as string, environment as string)
+  if (existingSources.length > 0) {
+    const sourceOptions = [
+      ...existingSources.map((s) => ({
+        value: s.name,
+        label: s.name,
+        hint: `${s.environment} — ${s.description}`,
+      })),
+      { value: '__new__', label: pc.cyan('+ Create a new source'), hint: '' },
+    ]
+
+    const selectedSource = await select({
+      message: 'Which source do you want to use?',
+      options: sourceOptions,
+    })
+    bail(selectedSource)
+
+    if (selectedSource !== '__new__') {
+      sourceName = selectedSource as string
+    } else {
+      sourceName = await promptNewSource()
+    }
+  } else {
+    sourceName = await promptNewSource()
+  }
+
+  async function promptNewSource(): Promise<string> {
+    const source = await text({
+      message: 'Source name (identifies the origin of logs)?',
+      placeholder: 'api-backend',
+      validate: (v) => {
+        if (!v.trim()) return 'Required.'
+        if (!/^[a-z0-9_-]+$/.test(v)) return 'Lowercase letters, digits and hyphens only.'
+        return undefined
+      },
+    })
+    bail(source)
+
+    const description = await text({
+      message: 'Source description?',
+      placeholder: 'User management',
+    })
+    bail(description)
+
+    const environment = await select({
+      message: 'Environment?',
+      options: [
+        { value: 'prod', label: 'Production', hint: 'prod' },
+        { value: 'dev', label: 'Development', hint: 'dev' },
+        { value: 'staging', label: 'Staging', hint: 'staging' },
+        { value: 'test', label: 'Test', hint: 'test' },
+      ],
+    })
+    bail(environment)
+
+    const result = await registerSource(base, accessToken, projectName, source as string, description as string, environment as string)
+    return result.name
+  }
+
+  let result = { name: sourceName }
 
   // 7. Write config
   const writeSpinner = spinner()
