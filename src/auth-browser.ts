@@ -135,7 +135,7 @@ function waitForCallback(): Promise<string> {
                     .card {
                     width: 100%;
                     max-width: 24rem;
-                    background: #1c2130;
+                    background: #13161f;
                     border: 1px solid #252b3b;
                     border-radius: 1rem;
                     padding: 2rem;
