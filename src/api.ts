@@ -95,7 +95,7 @@ export async function createSdkToken(
       token,
       body: JSON.stringify({
         name: `${sourceName} SDK`,
-        permissions: ['logs:write', 'heartbeat:write', 'performance:write'],
+        permissions: ['logs:write', 'heartbeat:write', 'performance:write', 'commands:write', 'commands:read'],
         source: sourceName,
       }),
     },
