@@ -3,6 +3,7 @@
   "version": "1.2.2",
   "description": "CLI to initialize an Orion logging project",
   "type": "module",
+  "license": "MIT",
   "bin": {
     "orion-cli": "./dist/index.js",
     "create-orion": "./dist/index.js"
