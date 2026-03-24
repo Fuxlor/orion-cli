@@ -45,7 +45,7 @@ async function main() {
   // 0. Existing config?
   if (configExists()) {
     const overwrite = await confirm({
-      message: pc.yellow('An orion.config.ts file already exists. Overwrite it?'),
+      message: pc.yellow('.orion/config.json already exists. Overwrite it?'),
       initialValue: false,
     })
     bail(overwrite)
@@ -263,7 +263,7 @@ async function main() {
 
   // 9. Write config
   const writeSpinner = spinner()
-  writeSpinner.start('Writing orion.config.ts...')
+  writeSpinner.start('Writing .orion/config.json...')
 
   const { configPath } = writeConfig(
     { token: sdkToken },
